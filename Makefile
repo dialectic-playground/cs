@@ -53,7 +53,8 @@ check-repository:
 toolchain:
 	python3 --version || python --version
 	make --version | head -1
-	dotnet --version | tee /dev/stderr | grep -q '^10\.'
+	@version="$$(dotnet --version)"; echo "$$version"; echo "$$version" | grep -q '^10\.' \
+		|| { echo "toolchain: expected a version matching ^10\." >&2; exit 1; }
 
 projects:
 	@[ -n "$(strip $(IMPLEMENTED))" ] || echo "projects: none implemented yet (IMPLEMENTED is empty)"
