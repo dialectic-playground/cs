@@ -6,7 +6,8 @@
 # project listed in IMPLEMENTED in the root Makefile.
 # - Container (podman): `make check` in the toolchain image (./Containerfile), on Linux.
 # - Native (Linux, macOS, Windows): `make check roundtrip` with DP_RUNTIME=local;
-#   toolchain: actions/setup-dotnet (10.0.x).
+#   toolchain: actions/setup-dotnet (10.0.x); on macOS its install location is registered in
+#   /etc/dotnet/install_location for framework-dependent executables.
 # - Shared tooling, DCO, and the required "CI result" check, as in every repository.
 #
 # Actions are pinned to full commit SHAs (organization policy); Dependabot keeps them current.
@@ -78,6 +79,16 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: 10.0.x
+
+      # Framework-dependent apphosts (dp-hello) find the runtime through DOTNET_ROOT, the
+      # registered install location, or the default location. The black-box runner starts
+      # tools with a minimal environment (no DOTNET_ROOT, CONV-29), and setup-dotnet installs
+      # to ~/.dotnet on macOS (the default locations on Linux and Windows), so register it.
+      - name: Register the .NET install location (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          sudo mkdir -p /etc/dotnet
+          printf '%s\n' "$DOTNET_ROOT" | sudo tee /etc/dotnet/install_location
 
       - name: make check roundtrip
         run: make check roundtrip

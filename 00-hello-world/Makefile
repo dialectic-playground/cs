@@ -21,17 +21,42 @@ TOOLS   := dp-hello
 # Path to the sdlc-curriculum checkout (the specs, test suites, and runner live there).
 CURRICULUM_ROOT ?= ../sdlc-curriculum
 
-# Directory that contains the built executables after `make all`, e.g. build/bin.
-BIN_DIR :=
+# C# (.NET 10): the solution, global.json (SDK pin), and NuGet lock files live in src/.
+# Every dotnet command runs from src/ so that global.json selects the SDK.
+DOTNET ?= dotnet
+SOLUTION := DpHello.slnx
+RESTORE := $(DOTNET) restore $(SOLUTION) --locked-mode
 
-# Language-specific commands. Use $(TOOLS), $(EXE), $(PREFIX), and $(BINDIR) as needed.
-DP_BUILD     =
-DP_INSTALL   =
-DP_UNINSTALL =
-DP_UNIT_TEST =
-DP_LINT      =
-DP_FORMAT    =
-DP_CLEAN     =
-DP_DISTCLEAN =
+# make all publishes a framework-dependent, single-file native executable (the .NET apphost,
+# dp-hello or dp-hello.exe) for the build machine into bin/.
+BIN_DIR := bin
+
+DP_BUILD = cd src && $(RESTORE) && $(DOTNET) publish DpHello.Cli/DpHello.Cli.csproj \
+	--configuration Release --no-restore --output ../$(BIN_DIR)
+
+define DP_INSTALL
+mkdir -p "$(BINDIR)"
+cp "$(BIN_DIR)/dp-hello$(EXE)" "$(BINDIR)/dp-hello$(EXE)"
+endef
+
+DP_UNINSTALL = rm -f "$(BINDIR)/dp-hello$(EXE)"
+
+DP_UNIT_TEST = cd src && $(RESTORE) && $(DOTNET) test --solution $(SOLUTION) \
+	--configuration Release --no-restore
+
+# TreatWarningsAsErrors + .NET analyzers + code style (EnforceCodeStyleInBuild), then the
+# formatter in verify mode.
+define DP_LINT
+cd src && $(RESTORE) && $(DOTNET) build $(SOLUTION) --configuration Release --no-restore
+cd src && $(DOTNET) format $(SOLUTION) --verify-no-changes --no-restore
+endef
+
+DP_FORMAT = cd src && $(RESTORE) && $(DOTNET) format $(SOLUTION) --no-restore
+
+DP_CLEAN = rm -rf $(BIN_DIR) src/*/bin src/*/obj src/*/TestResults
+
+# NuGet's package cache lives in the user's home directory, outside the project; remove
+# local editor and IDE state.
+DP_DISTCLEAN = rm -rf src/.vs src/*/*.csproj.user
 
 include $(CURRICULUM_ROOT)/shared/templates/BASE-MAKEFILE

@@ -1,5 +1,5 @@
 # Keeps GitHub Actions (SHA-pinned) and the toolchain image digest current.
-# Package ecosystems (dotnet CLI (NuGet)) are added when the first project's manifests exist.
+# NuGet: one entry per implemented project (packages.lock.json is committed).
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -23,3 +23,13 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
+
+  - package-ecosystem: nuget
+    directory: /00-hello-world/src
+    schedule:
+      interval: weekly
+    groups:
+      nuget:
+        patterns: ["*"]
+    commit-message:
+      prefix: build

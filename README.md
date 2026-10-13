@@ -16,7 +16,7 @@ This repository implements the eleven projects of the
 specified to the byte by the curriculum and verified by its black-box tests on Linux, macOS,
 and Windows.
 
-**Status:** repository and toolchain ready; no projects implemented yet.
+**Status:** Implemented projects: 00-hello-world.
 
 ## C# at a glance
 
@@ -38,6 +38,24 @@ and Windows.
 | Native CI | actions/setup-dotnet (10.0.x) |
 
 `make toolchain` verifies that the container and native toolchains are on this release line.
+
+### Per-project tooling
+
+Everything language-specific lives in the project's `src/`, and every `dotnet` command runs
+from there so that `global.json` selects the SDK. All tools ship with the .NET SDK; the
+container needs nothing beyond the base image, `make`, and `python3`.
+
+| Concern | Tool / setting |
+| :-- | :-- |
+| Layout | `src/<Name>.slnx` with an app project (assembly `dp-…`), a class library for the logic, and an xUnit test project |
+| SDK pin | `src/global.json`: `10.0.100` with `rollForward: latestFeature` (any 10.0 SDK) |
+| Shared build settings | `src/Directory.Build.props`: `net10.0`, `Nullable`, `TreatWarningsAsErrors`, .NET analyzers (`AnalysisLevel latest`, `Recommended`), `EnforceCodeStyleInBuild` |
+| Dependencies | NuGet with committed `packages.lock.json` files, restored with `dotnet restore --locked-mode` |
+| Unit tests | xUnit v3 on Microsoft.Testing.Platform (`dotnet test --solution`; opted in through `global.json`) |
+| Lint | `dotnet build` (warnings are errors, analyzers and code style included) + `dotnet format --verify-no-changes` |
+| Format | `dotnet format`; C# style in `src/.editorconfig` (4-space indentation, file-scoped namespaces) |
+| `BIN_DIR` | `bin/`: `dotnet publish` of a framework-dependent, single-file apphost (`dp-hello`, `dp-hello.exe` on Windows) for the build machine's runtime identifier |
+| Install | copies that single executable to `$(BINDIR)`; it needs the .NET 10 runtime, found at the standard install location or through `DOTNET_ROOT` |
 
 ## Layout
 

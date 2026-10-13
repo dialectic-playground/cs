@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="DpHello.Cli/DpHello.Cli.csproj" />
+  <Project Path="DpHello.Core/DpHello.Core.csproj" />
+  <Project Path="DpHello.Tests/DpHello.Tests.csproj" />
+</Solution>
