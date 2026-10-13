@@ -1,13 +1,15 @@
-# Toolchain image for REPO-NAME (container-first; see tools/dp-run).
+# Toolchain image for dialectic-playground/cs: C# (container-first; see tools/dp-run).
 #
-# TEMPLATE: replace the base image with the official image for this repository's toolchain,
-# pinned by its multi-architecture index digest (FROM image:tag@sha256:...), and add only
-# what that image lacks. Keep `make` and the final ENV line. Dependabot (docker) keeps the
-# pin current.
-FROM docker.io/library/debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f
+# .NET 10 (LTS); build and package tool: dotnet CLI (NuGet).
+# Official base image pinned by multi-architecture index digest, plus make and python3 (for the
+# curriculum's black-box runner). Dependabot (docker) refreshes the digest; moving to a new
+# release line is a deliberate change (keep `make toolchain` and the native CI in step).
+FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:e70cdb7f80b0348f5cb85f19a8f670fca061f033d57eed12fa003d58b0e06317
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends make git ca-certificates \
+    && apt-get install -y --no-install-recommends make python3 \
     && rm -rf /var/lib/apt/lists/*
 
-ENV DP_IN_CONTAINER=1
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    DOTNET_NOLOGO=1 \
+    DP_IN_CONTAINER=1
