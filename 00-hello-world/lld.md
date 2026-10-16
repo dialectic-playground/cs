@@ -1,14 +1,44 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+**Table of Contents** _generated with [DocToc](https://github.com/thlorenz/doctoc)_
+
+- [Low-Level Design (LLD) — Standard Terminal Hello World](#low-level-design-lld--standard-terminal-hello-world)
+  - [1. Source layout](#1-source-layout)
+  - [2. Data types](#2-data-types)
+    - [2.1 `OptionValue(string Option, string Value)`](#21-optionvaluestring-option-string-value)
+    - [2.2 `ParseOutcome` (closed: private constructor, sealed nested records)](#22-parseoutcome-closed-private-constructor-sealed-nested-records)
+    - [2.3 `Settings(string Name, int Count)`](#23-settingsstring-name-int-count)
+    - [2.4 Error type: `ValidationOutcome`](#24-error-type-validationoutcome)
+  - [3. Module and function specifications](#3-module-and-function-specifications)
+    - [3.1 `CommandLine.Parse`](#31-commandlineparse)
+    - [3.2 `Validator.Validate`](#32-validatorvalidate)
+    - [3.3 `Validator.TryParseCount`](#33-validatortryparsecount)
+    - [3.4 `Greeting.Line`](#34-greetingline)
+    - [3.5 `Output.WriteRepeated` / `Output.Write`](#35-outputwriterepeated--outputwrite)
+    - [3.6 `Application.Run`](#36-applicationrun)
+    - [3.7 `Messages`](#37-messages)
+    - [3.8 `Program` (top-level statements, `DpHello.Cli`)](#38-program-top-level-statements-dphellocli)
+  - [4. Algorithms](#4-algorithms)
+    - [4.1 The scan (CONV-07 … CONV-12)](#41-the-scan-conv-07--conv-12)
+  - [5. Platform-specific details](#5-platform-specific-details)
+  - [6. Resource management](#6-resource-management)
+  - [7. Sequence of one invocation](#7-sequence-of-one-invocation)
+  - [8. Design-to-code checklist](#8-design-to-code-checklist)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 # Low-Level Design (LLD) — Standard Terminal Hello World
 
-| Field | Value |
-| :-- | :-- |
-| Project | `00-hello-world` |
-| Tools | dp-hello |
-| Implementation language | C# 14 on .NET 10 (LTS) |
-| Author | Brandon Perkins (with Claude Code) |
-| Version / date | 1.0 — 2026-10-13 |
-| Status | Approved |
-| Inputs | `hld.md`, `specs/SRS.md`, `shared/CLI-CONVENTIONS.md` |
+| Field                   | Value                                                 |
+| :---------------------- | :---------------------------------------------------- |
+| Project                 | `00-hello-world`                                      |
+| Tools                   | dp-hello                                              |
+| Implementation language | C# 14 on .NET 10 (LTS)                                |
+| Author                  | Brandon Perkins (with Claude Code)                    |
+| Version / date          | 1.0 — 2026-10-13                                      |
+| Status                  | Approved                                              |
+| Inputs                  | `hld.md`, `specs/SRS.md`, `shared/CLI-CONVENTIONS.md` |
 
 ## 1. Source layout
 
@@ -37,42 +67,47 @@ Each project has a committed `packages.lock.json`. `make all` publishes `DpHello
 ## 2. Data types
 
 ### 2.1 `OptionValue(string Option, string Value)`
-| Field | Type | Constraint / invariant | SRS |
-| :-- | :-- | :-- | :-- |
+
+| Field    | Type     | Constraint / invariant                                    | SRS                   |
+| :------- | :------- | :-------------------------------------------------------- | :-------------------- |
 | `Option` | `string` | The option as written: `-n`, `--name`, `-c`, or `--count` | FR-03, FR-05, CONV-13 |
-| `Value` | `string` | Raw value, unvalidated; may be empty | FR-02, FR-04 |
+| `Value`  | `string` | Raw value, unvalidated; may be empty                      | FR-02, FR-04          |
 
 ### 2.2 `ParseOutcome` (closed: private constructor, sealed nested records)
-| Variant | Fields | Meaning |
-| :-- | :-- | :-- |
-| `HelpRequested` | — | `--help` reached first (FR-07) |
-| `VersionRequested` | — | `--version` reached first (FR-08) |
-| `SyntaxError` | `Message` | Unknown option, missing argument, or `=value` on a flag (FR-10) |
-| `Arguments` | `Name?`, `Count?` (`OptionValue`), `Operands` (`IReadOnlyList<string>`) | Scan completed; last occurrence of each option (FR-06) |
+
+| Variant            | Fields                                                                  | Meaning                                                         |
+| :----------------- | :---------------------------------------------------------------------- | :-------------------------------------------------------------- |
+| `HelpRequested`    | —                                                                       | `--help` reached first (FR-07)                                  |
+| `VersionRequested` | —                                                                       | `--version` reached first (FR-08)                               |
+| `SyntaxError`      | `Message`                                                               | Unknown option, missing argument, or `=value` on a flag (FR-10) |
+| `Arguments`        | `Name?`, `Count?` (`OptionValue`), `Operands` (`IReadOnlyList<string>`) | Scan completed; last occurrence of each option (FR-06)          |
 
 ### 2.3 `Settings(string Name, int Count)`
+
 Invariants: `Name` is non-empty; `1 <= Count <= 1000` (FR-03, FR-04).
 
 ### 2.4 Error type: `ValidationOutcome`
+
 `Valid(Settings)` or `Invalid(Message)`. Every usage error, from either the scan or the
 validation, is reported identically by `Application.Run`:
 
-| Variant / source | Diagnostic (stderr) | Exit status |
-| :-- | :-- | :-- |
-| `SyntaxError` / unknown short option | `dp-hello: invalid option -- 'x'` + hint | 2 |
-| `SyntaxError` / unknown long option | `dp-hello: unrecognized option '<token>'` + hint | 2 |
-| `SyntaxError` / `-n`, `-c` without value | `dp-hello: option requires an argument -- 'n'` + hint | 2 |
-| `SyntaxError` / `--name`, `--count` without value | `dp-hello: option '--name' requires an argument` + hint | 2 |
-| `SyntaxError` / `--help=…`, `--version=…` | `dp-hello: option '--help' doesn't allow an argument` + hint | 2 |
-| `Invalid` / operand | `dp-hello: extra operand '<first>'` + hint | 2 |
-| `Invalid` / empty name | `dp-hello: invalid argument '' for '<-n or --name>'` + hint | 2 |
-| `Invalid` / bad count | `dp-hello: invalid argument '<value>' for '<-c or --count>'` + hint | 2 |
+| Variant / source                                  | Diagnostic (stderr)                                                 | Exit status |
+| :------------------------------------------------ | :------------------------------------------------------------------ | :---------- |
+| `SyntaxError` / unknown short option              | `dp-hello: invalid option -- 'x'` + hint                            | 2           |
+| `SyntaxError` / unknown long option               | `dp-hello: unrecognized option '<token>'` + hint                    | 2           |
+| `SyntaxError` / `-n`, `-c` without value          | `dp-hello: option requires an argument -- 'n'` + hint               | 2           |
+| `SyntaxError` / `--name`, `--count` without value | `dp-hello: option '--name' requires an argument` + hint             | 2           |
+| `SyntaxError` / `--help=…`, `--version=…`         | `dp-hello: option '--help' doesn't allow an argument` + hint        | 2           |
+| `Invalid` / operand                               | `dp-hello: extra operand '<first>'` + hint                          | 2           |
+| `Invalid` / empty name                            | `dp-hello: invalid argument '' for '<-n or --name>'` + hint         | 2           |
+| `Invalid` / bad count                             | `dp-hello: invalid argument '<value>' for '<-c or --count>'` + hint | 2           |
 
 The hint is `Try 'dp-hello --help' for more information.`; both lines end in LF.
 
 ## 3. Module and function specifications
 
 ### 3.1 `CommandLine.Parse`
+
 - **Signature:** `public static ParseOutcome Parse(IReadOnlyList<string> args)`
 - **Responsibility:** perform the CONV-12 scan.
 - **Preconditions:** `args` is not null (guarded) and excludes the program name.
@@ -90,6 +125,7 @@ The hint is `Try 'dp-hello --help' for more information.`; both lines end in LF.
   `Parse_SyntaxErrors_UseConv13Messages`.
 
 ### 3.2 `Validator.Validate`
+
 - **Signature:** `public static ValidationOutcome Validate(ParseOutcome.Arguments arguments)`
 - **Responsibility:** check operands and the winning option values after the scan.
 - **Postconditions:** `Valid(Settings)` satisfying §2.3, or `Invalid` with the first error in
@@ -104,6 +140,7 @@ The hint is `Try 'dp-hello --help' for more information.`; both lines end in LF.
   `Validate_EmptyName_ReportedBeforeInvalidCount`.
 
 ### 3.3 `Validator.TryParseCount`
+
 - **Signature:** `public static bool TryParseCount(string text, out int count)`
 - **Algorithm:** false if empty; for each UTF-16 unit, false unless `char.IsAsciiDigit`;
   accumulate `min(count * 10 + digit, 1001)` (saturating, so 20-digit values cannot
@@ -112,11 +149,13 @@ The hint is `Try 'dp-hello --help' for more information.`; both lines end in LF.
   `Validate_InvalidCount`, `TryParseCount_RejectsNull`.
 
 ### 3.4 `Greeting.Line`
+
 - **Signature:** `public static string Line(string name)`
 - **Postconditions:** returns `"Hello, " + name + "!\n"`; pure and total.
 - **Satisfies:** FR-01, FR-02, NFR-05. **Unit tests:** `GreetingTests.*`.
 
 ### 3.5 `Output.WriteRepeated` / `Output.Write`
+
 - **Signature:** `public static void WriteRepeated(Stream stream, string text, int times)`;
   `Write(stream, text)` calls it with `times = 1`.
 - **Algorithm:** encode `text` once with `UTF8Encoding(false)`; wrap `stream` in a 64 KiB
@@ -128,6 +167,7 @@ The hint is `Try 'dp-hello --help' for more information.`; both lines end in LF.
   `Run_MaximumCount_WritesExactlyThatManyLfTerminatedLines`.
 
 ### 3.6 `Application.Run`
+
 - **Signature:** `public static int Run(IReadOnlyList<string> args, Stream stdout, Stream stderr)`
 - **Responsibility:** the whole program, minus opening the real streams.
 - **Algorithm:** map `CommandLine.Parse(args)` (and, for `Arguments`, `Validator.Validate`)
@@ -141,6 +181,7 @@ The hint is `Try 'dp-hello --help' for more information.`; both lines end in LF.
   output tests in §3.5.
 
 ### 3.7 `Messages`
+
 Constants `ToolName`, `HelpText`, `VersionLine` and one formatting method per CONV-13 row
 (`InvalidOption`, `UnrecognizedOption`, `ShortOptionRequiresArgument`,
 `LongOptionRequiresArgument`, `OptionDoesNotAllowArgument`, `InvalidArgument`, `ExtraOperand`)
@@ -148,12 +189,14 @@ plus `UsageDiagnostic(message)`. Values are inserted verbatim (CONV-15). Verifie
 parser, validator, and application tests above.
 
 ### 3.8 `Program` (top-level statements, `DpHello.Cli`)
+
 Opens `Console.OpenStandardOutput()` and `Console.OpenStandardError()` and returns
 `Application.Run(args, stdout, stderr)` as the exit status. Verified by P01–P10.
 
 ## 4. Algorithms
 
 ### 4.1 The scan (CONV-07 … CONV-12)
+
 ```text
 i = 0
 while i < len(args):
@@ -173,28 +216,32 @@ while i < len(args):
     else: operands += t        (includes "-")
 return Arguments(name, count, operands)
 ```
+
 Both short options take a value, so a bundle always ends at its first letter (`-c2` → value
 `2`; `-cn5` → count `n5`, rejected later). Values may start with `-` when attached or given
 as the next token. Long names must match exactly (no abbreviations, CONV-08).
 
 ## 5. Platform-specific details
 
-| Concern | Linux | macOS | Windows | Abstraction |
-| :-- | :-- | :-- | :-- | :-- |
-| Arguments → `string[]` | runtime decodes `argv` as UTF-8 | same | runtime takes the UTF-16 command line | .NET runtime |
-| Binary stdout/stderr | raw fd streams | raw fd streams | raw handle streams (`WriteFile`), no CRLF translation | `Console.OpenStandard*` |
-| Executable | `bin/dp-hello` (apphost, linux-x64/arm64) | `bin/dp-hello` (osx-x64/arm64) | `bin/dp-hello.exe` (win-x64/arm64) | `UseCurrentRuntimeIdentifier`, `$(EXE)` |
-| Runtime lookup | default `/usr/share/dotnet` | registered `/etc/dotnet/install_location` (CI) or default | default `C:\Program Files\dotnet` | apphost |
-| Broken pipe | `IOException` (EPIPE; .NET ignores SIGPIPE) | same | `IOException` (`ERROR_NO_DATA`) | `Application.Run` |
+| Concern                | Linux                                       | macOS                                                     | Windows                                               | Abstraction                             |
+| :--------------------- | :------------------------------------------ | :-------------------------------------------------------- | :---------------------------------------------------- | :-------------------------------------- |
+| Arguments → `string[]` | runtime decodes `argv` as UTF-8             | same                                                      | runtime takes the UTF-16 command line                 | .NET runtime                            |
+| Binary stdout/stderr   | raw fd streams                              | raw fd streams                                            | raw handle streams (`WriteFile`), no CRLF translation | `Console.OpenStandard*`                 |
+| Executable             | `bin/dp-hello` (apphost, linux-x64/arm64)   | `bin/dp-hello` (osx-x64/arm64)                            | `bin/dp-hello.exe` (win-x64/arm64)                    | `UseCurrentRuntimeIdentifier`, `$(EXE)` |
+| Runtime lookup         | default `/usr/share/dotnet`                 | registered `/etc/dotnet/install_location` (CI) or default | default `C:\Program Files\dotnet`                     | apphost                                 |
+| Broken pipe            | `IOException` (EPIPE; .NET ignores SIGPIPE) | same                                                      | `IOException` (`ERROR_NO_DATA`)                       | `Application.Run`                       |
 
 ## 6. Resource management
+
 The two standard streams are opened once in `Program` with `using` and disposed on return.
 `Output` holds one encoded line plus a 64 KiB buffer and flushes it on every successful path.
 Peak managed allocation is O(length of NAME), independent of COUNT. No files, threads, or
 child processes are created.
 
 ## 7. Sequence of one invocation
+
 Public test P06, `dp-hello -c2 -n Ken`:
+
 1. The apphost starts the runtime; `Program` opens stdout/stderr and calls `Application.Run`.
 2. `CommandLine.Parse`: `-c2` → short `c`, rest `2` → record `(-c, "2")`; `-n` → short `n`,
    rest empty → value `Ken` from the next token → record `(-n, "Ken")`. End:
@@ -206,12 +253,12 @@ Public test P06, `dp-hello -c2 -n Ken`:
 
 ## 8. Design-to-code checklist
 
-| HLD component | LLD section | Source file(s) | Unit-test file(s) |
-| :-- | :-- | :-- | :-- |
-| `CommandLine` | §3.1, §4.1 | `DpHello.Core/CommandLine.cs` | `DpHello.Tests/CommandLineTests.cs` |
-| `Validator` | §3.2, §3.3 | `DpHello.Core/Validator.cs` | `DpHello.Tests/ValidatorTests.cs` |
-| `Greeting` | §3.4 | `DpHello.Core/Greeting.cs` | `DpHello.Tests/GreetingTests.cs` |
-| `Output` | §3.5 | `DpHello.Core/Output.cs` | `DpHello.Tests/ApplicationTests.cs` |
-| `Messages` | §3.7 | `DpHello.Core/Messages.cs` | `CommandLineTests.cs`, `ValidatorTests.cs`, `ApplicationTests.cs` |
-| `Application` | §3.6 | `DpHello.Core/Application.cs` | `DpHello.Tests/ApplicationTests.cs` |
-| `Program` | §3.8 | `DpHello.Cli/Program.cs` | black-box P01–P10 |
+| HLD component | LLD section | Source file(s)                | Unit-test file(s)                                                 |
+| :------------ | :---------- | :---------------------------- | :---------------------------------------------------------------- |
+| `CommandLine` | §3.1, §4.1  | `DpHello.Core/CommandLine.cs` | `DpHello.Tests/CommandLineTests.cs`                               |
+| `Validator`   | §3.2, §3.3  | `DpHello.Core/Validator.cs`   | `DpHello.Tests/ValidatorTests.cs`                                 |
+| `Greeting`    | §3.4        | `DpHello.Core/Greeting.cs`    | `DpHello.Tests/GreetingTests.cs`                                  |
+| `Output`      | §3.5        | `DpHello.Core/Output.cs`      | `DpHello.Tests/ApplicationTests.cs`                               |
+| `Messages`    | §3.7        | `DpHello.Core/Messages.cs`    | `CommandLineTests.cs`, `ValidatorTests.cs`, `ApplicationTests.cs` |
+| `Application` | §3.6        | `DpHello.Core/Application.cs` | `DpHello.Tests/ApplicationTests.cs`                               |
+| `Program`     | §3.8        | `DpHello.Cli/Program.cs`      | black-box P01–P10                                                 |
