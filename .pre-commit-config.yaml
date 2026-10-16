@@ -54,6 +54,8 @@ repos:
         name: detect private key
       - id: end-of-file-fixer
         name: fix end of files
+        # NuGet writes its lock files; restore and Dependabot rewrite them.
+        exclude: (^|/)packages\.lock\.json$
       - id: fix-byte-order-marker
         name: fix utf-8 byte order marker
       - id: forbid-submodules
@@ -68,6 +70,8 @@ repos:
         name: "don't commit to branch"
       - id: trailing-whitespace
         name: trim trailing whitespace
+        # NuGet writes its lock files; restore and Dependabot rewrite them.
+        exclude: (^|/)packages\.lock\.json$
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.0
     hooks:
@@ -139,6 +143,8 @@ repos:
         name: Enforce global EditorConfig rules (spacing, newlines, charsets)
         args:
           - -disable-indent-size
+        # NuGet writes its lock files without a final newline.
+        exclude: (^|/)packages\.lock\.json$
   # Keeps any shared hook additional_dependencies neatly synchronized
   - repo: https://github.com/pre-commit/sync-pre-commit-deps
     rev: v0.0.5
