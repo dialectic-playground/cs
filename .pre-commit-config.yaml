@@ -73,7 +73,7 @@ repos:
         # NuGet writes its lock files; restore and Dependabot rewrite them.
         exclude: (^|/)packages\.lock\.json$
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.30.0
+    rev: v8.30.1
     hooks:
       - id: gitleaks
         name: Detect hardcoded secrets, API keys, and credentials
