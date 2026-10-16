@@ -107,8 +107,9 @@ public static class CommandLine
                         {
                             return new ParseOutcome.SyntaxError(Messages.LongOptionRequiresArgument(longName));
                         }
-
-                        Record(longName == "name" ? Valued.Name : Valued.Count, new OptionValue("--" + longName, value));
+                        Record(
+                            longName == "name" ? Valued.Name : Valued.Count,
+                            new OptionValue("--" + longName, value));
                         break;
                     default:
                         return new ParseOutcome.SyntaxError(Messages.UnrecognizedOption(token));

@@ -1,3 +1,20 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+**Table of Contents** _generated with [DocToc](https://github.com/thlorenz/doctoc)_
+
+- [cs](#cs)
+  - [C# at a glance](#c-at-a-glance)
+  - [Toolchain](#toolchain)
+    - [Per-project tooling](#per-project-tooling)
+  - [Layout](#layout)
+  - [Development](#development)
+  - [Implementing a project](#implementing-a-project)
+  - [Contributing](#contributing)
+  - [License](#license)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/dialectic-playground/.github/main/assets/cs/dist/logo-dark.svg">
@@ -11,7 +28,7 @@ C# implementation of the Dialectic Playground SDLC curriculum.
 
 📖 **Documentation:** <https://dialectic-playground.github.io/docs/reference/languages/cs/>
 
-This repository implements the eleven projects of the
+This repository implements the fifty-three projects of the
 [SDLC curriculum](https://github.com/dialectic-playground/sdlc-curriculum) in C#. Each project is
 specified to the byte by the curriculum and verified by its black-box tests on Linux, macOS,
 and Windows.
@@ -20,22 +37,22 @@ and Windows.
 
 ## C# at a glance
 
-| Aspect | C# |
-| :-- | :-- |
-| File extension | `.cs` |
-| CLI classification | Included |
-| Image category | First-Class |
+| Aspect                  | C#                                                         |
+| :---------------------- | :--------------------------------------------------------- |
+| File extension          | `.cs`                                                      |
+| CLI classification      | Included                                                   |
+| Image category          | First-Class                                                |
 | Access to OS primitives | Runtime wraps system arguments into top-level Main() array |
-| Entry-point mechanism | Application Level (deep native reflection tools) |
+| Entry-point mechanism   | Application Level (deep native reflection tools)           |
 
 ## Toolchain
 
-| | |
-| :-- | :-- |
-| Release line | .NET 10 (LTS) |
-| Build / package tool | dotnet CLI (NuGet) |
-| Container image | `mcr.microsoft.com/dotnet/sdk:10.0`, pinned by digest ([`Containerfile`](Containerfile)) |
-| Native CI | actions/setup-dotnet (10.0.x) |
+|                      |                                                                                          |
+| :------------------- | :--------------------------------------------------------------------------------------- |
+| Release line         | .NET 10 (LTS)                                                                            |
+| Build / package tool | dotnet CLI (NuGet)                                                                       |
+| Container image      | `mcr.microsoft.com/dotnet/sdk:10.0`, pinned by digest ([`Containerfile`](Containerfile)) |
+| Native CI            | actions/setup-dotnet (10.0.x)                                                            |
 
 `make toolchain` verifies that the container and native toolchains are on this release line.
 
@@ -45,28 +62,28 @@ Everything language-specific lives in the project's `src/`, and every `dotnet` c
 from there so that `global.json` selects the SDK. All tools ship with the .NET SDK; the
 container needs nothing beyond the base image, `make`, and `python3`.
 
-| Concern | Tool / setting |
-| :-- | :-- |
-| Layout | `src/<Name>.slnx` with an app project (assembly `dp-…`), a class library for the logic, and an xUnit test project |
-| SDK pin | `src/global.json`: `10.0.100` with `rollForward: latestFeature` (any 10.0 SDK) |
+| Concern               | Tool / setting                                                                                                                                                 |
+| :-------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Layout                | `src/<Name>.slnx` with an app project (assembly `dp-…`), a class library for the logic, and an xUnit test project                                              |
+| SDK pin               | `src/global.json`: `10.0.100` with `rollForward: latestFeature` (any 10.0 SDK)                                                                                 |
 | Shared build settings | `src/Directory.Build.props`: `net10.0`, `Nullable`, `TreatWarningsAsErrors`, .NET analyzers (`AnalysisLevel latest`, `Recommended`), `EnforceCodeStyleInBuild` |
-| Dependencies | NuGet with committed `packages.lock.json` files, restored with `dotnet restore --locked-mode` |
-| Unit tests | xUnit v3 on Microsoft.Testing.Platform (`dotnet test --solution`; opted in through `global.json`) |
-| Lint | `dotnet build` (warnings are errors, analyzers and code style included) + `dotnet format --verify-no-changes` |
-| Format | `dotnet format`; C# style in `src/.editorconfig` (4-space indentation, file-scoped namespaces) |
-| `BIN_DIR` | `bin/`: `dotnet publish` of a framework-dependent, single-file apphost (`dp-hello`, `dp-hello.exe` on Windows) for the build machine's runtime identifier |
-| Install | copies that single executable to `$(BINDIR)`; it needs the .NET 10 runtime, found at the standard install location or through `DOTNET_ROOT` |
+| Dependencies          | NuGet with committed `packages.lock.json` files, restored with `dotnet restore --locked-mode`                                                                  |
+| Unit tests            | xUnit v3 on Microsoft.Testing.Platform (`dotnet test --solution`; opted in through `global.json`)                                                              |
+| Lint                  | `dotnet build` (warnings are errors, analyzers and code style included) + `dotnet format --verify-no-changes`                                                  |
+| Format                | `dotnet format`; C# style in `src/.editorconfig` (4-space indentation, file-scoped namespaces)                                                                 |
+| `BIN_DIR`             | `bin/`: `dotnet publish` of a framework-dependent, single-file apphost (`dp-hello`, `dp-hello.exe` on Windows) for the build machine's runtime identifier      |
+| Install               | copies that single executable to `$(BINDIR)`; it needs the .NET 10 runtime, found at the standard install location or through `DOTNET_ROOT`                    |
 
 ## Layout
 
-| Path | Contents |
-| :--- | :--- |
-| `00-hello-world/` … `10-sys-monitor/` | One workspace per curriculum project: `Makefile` (with `DP_*` hooks), HLD, LLD, RTM, master test plan, and `src/` |
-| `sdlc-curriculum/` | The curriculum, as a git submodule pinned to a release tag |
-| `Makefile` | `make check` (repository, toolchain, implemented projects), `toolchain`, `projects`, `roundtrip` |
-| `Containerfile`, `.devcontainer/` | The toolchain image and the matching dev container |
-| `tools/dp-run`, `tools/container.mk` | Shared container tooling (copies of the canonical files in `dialectic-playground/.github`) |
-| `.github/workflows/ci.yml` | CI: container and native (Linux, macOS, Windows) `make` targets, shared-tooling check, DCO |
+| Path                                 | Contents                                                                                                          |
+| :----------------------------------- | :---------------------------------------------------------------------------------------------------------------- |
+| `00-hello-world/` … `52-spacecraft/` | One workspace per curriculum project: `Makefile` (with `DP_*` hooks), HLD, LLD, RTM, master test plan, and `src/` |
+| `sdlc-curriculum/`                   | The curriculum, as a git submodule pinned to a release tag                                                        |
+| `Makefile`                           | `make check` (repository, toolchain, implemented projects), `toolchain`, `projects`, `roundtrip`                  |
+| `Containerfile`, `.devcontainer/`    | The toolchain image and the matching dev container                                                                |
+| `tools/dp-run`, `tools/container.mk` | Shared container tooling (copies of the canonical files in `dialectic-playground/.github`)                        |
+| `.github/workflows/ci.yml`           | CI: container and native (Linux, macOS, Windows) `make` targets, shared-tooling check, DCO                        |
 
 ## Development
 
