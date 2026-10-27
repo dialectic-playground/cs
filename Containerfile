@@ -4,7 +4,7 @@
 # Official base image pinned by multi-architecture index digest, plus make and python3 (for the
 # curriculum's black-box runner). Dependabot (docker) refreshes the digest; moving to a new
 # release line is a deliberate change (keep `make toolchain` and the native CI in step).
-FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:0d99ebf1ccad15037b5c98c9fe8979d6b8dbac23812feae2277a0b277b5c5ffa
+FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b
 
 # Debian keeps only the current version of each package, so apt versions cannot be pinned
 # reproducibly; the base image is pinned by digest instead.
